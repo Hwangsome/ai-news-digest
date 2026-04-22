@@ -13,6 +13,7 @@ from ai_news.config import Config, SourceSpec, load_config
 from ai_news.delivery.smtp import Mailer, SMTPMailer
 from ai_news.llm.base import LLMProvider
 from ai_news.llm.claude import ClaudeProvider
+from ai_news.llm.fallback import FallbackLLM
 from ai_news.llm.gemini import GeminiProvider
 from ai_news.llm.openai_compatible import OpenAICompatibleProvider
 from ai_news.pipeline.dedup import dedup_against_seen
@@ -45,16 +46,26 @@ def build_source(spec: SourceSpec, *, gh_token: str | None) -> Source:
 
 
 def build_llm(cfg: Config) -> LLMProvider:
-    p, m, k = cfg.llm.provider, cfg.llm.model, cfg.llm.api_key
-    if p == "openai":
-        return OpenAICompatibleProvider.for_openai(api_key=k, model=m)
-    if p == "deepseek":
-        return OpenAICompatibleProvider.for_deepseek(api_key=k, model=m)
-    if p == "claude":
-        return ClaudeProvider(api_key=k, model=m)
-    if p == "gemini":
-        return GeminiProvider(api_key=k, model=m)
-    raise ValueError(f"unknown llm provider: {p}")
+    primary = _build_provider(cfg.llm.provider, cfg.llm.model, cfg.llm.api_key)
+    fb_provider = cfg.llm.fallback_provider
+    fb_key = cfg.llm.fallback_api_key
+    fb_model = cfg.llm.fallback_model
+    if fb_provider and fb_key and fb_model:
+        fallback = _build_provider(fb_provider, fb_model, fb_key)
+        return FallbackLLM(primary=primary, fallback=fallback)
+    return primary
+
+
+def _build_provider(provider: str, model: str, api_key: str) -> LLMProvider:
+    if provider == "openai":
+        return OpenAICompatibleProvider.for_openai(api_key=api_key, model=model)
+    if provider == "deepseek":
+        return OpenAICompatibleProvider.for_deepseek(api_key=api_key, model=model)
+    if provider == "claude":
+        return ClaudeProvider(api_key=api_key, model=model)
+    if provider == "gemini":
+        return GeminiProvider(api_key=api_key, model=model)
+    raise ValueError(f"unknown llm provider: {provider}")
 
 
 def _subject_prefix(failed: list[str], rendered: int) -> str:
@@ -134,7 +145,18 @@ def main(
         if failed:
             tail += f" · {len(failed)} 源失败"
         subject = f"{prefix} {date_str} · {tail}"
-    banner = f"⚠ 以下信息源抓取失败：{', '.join(failed)}" if failed else None
+    fallback_banner = None
+    if isinstance(llm, FallbackLLM) and llm.used_fallback:
+        fallback_banner = (
+            f"ℹ 本期由 fallback provider ({llm.fallback.name}) 生成"
+        )
+    banner_parts = [
+        p for p in [
+            fallback_banner,
+            f"⚠ 以下信息源抓取失败：{', '.join(failed)}" if failed else None,
+        ] if p
+    ]
+    banner = " · ".join(banner_parts) if banner_parts else None
 
     html = render_email(
         subject=subject,
