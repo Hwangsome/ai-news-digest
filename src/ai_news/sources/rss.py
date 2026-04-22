@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import logging
+from calendar import timegm
 from datetime import datetime, timezone
-from time import mktime
 
 import feedparser
 import httpx
@@ -69,5 +69,5 @@ def _entry_time(entry) -> datetime | None:
     for key in ("published_parsed", "updated_parsed"):
         t = getattr(entry, key, None)
         if t:
-            return datetime.fromtimestamp(mktime(t), tz=timezone.utc)
+            return datetime.fromtimestamp(timegm(t), tz=timezone.utc)
     return None

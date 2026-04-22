@@ -29,3 +29,11 @@ def test_rss_filters_out_items_older_than_since(monkeypatch):
     assert len(src.fetch(since=since)) == 1
     since = datetime(2027, 1, 1, tzinfo=UTC)
     assert src.fetch(since=since) == []
+
+
+def test_rss_published_at_is_utc(monkeypatch):
+    src = RSSSource(name="OpenAI", url="x", weight=1.0)
+    monkeypatch.setattr(src, "_fetch_bytes",
+                       lambda: (FIXTURES / "openai_rss.xml").read_bytes())
+    items = src.fetch(since=datetime(2026, 1, 1, tzinfo=UTC))
+    assert items[0].published_at == datetime(2026, 4, 22, 12, 0, tzinfo=UTC)
