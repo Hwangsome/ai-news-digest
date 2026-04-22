@@ -4,6 +4,10 @@ on:
     - cron: "0 0 * * 1"   # Mon 08:00 CST
   workflow_dispatch:
 
+concurrency:
+  group: digest
+  cancel-in-progress: false
+
 jobs:
   send:
     runs-on: ubuntu-latest
@@ -15,7 +19,7 @@ jobs:
       - run: pip install -e .
 
       - name: Restore seen_items
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: seen_items.sqlite
           key: seen-items-${{ github.run_id }}
