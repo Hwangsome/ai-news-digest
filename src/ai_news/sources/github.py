@@ -35,7 +35,7 @@ class GitHubReleasesSource:
     def fetch(self, *, since: datetime) -> list[RawItem]:
         try:
             releases = self._fetch_json()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, ValueError) as exc:
             logger.warning("source=%s (github) fetch failed: %s", self.name, exc)
             return []
 
