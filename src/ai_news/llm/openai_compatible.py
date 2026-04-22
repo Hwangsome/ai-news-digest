@@ -19,11 +19,13 @@ class OpenAICompatibleProvider:
         model: str,
         base_url: str,
         timeout: float = 60.0,
+        json_mode: bool = True,
     ) -> None:
         self.api_key = api_key
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.json_mode = json_mode
 
     @classmethod
     def for_openai(cls, *, api_key: str, model: str) -> OpenAICompatibleProvider:
@@ -43,17 +45,20 @@ class OpenAICompatibleProvider:
 
     def _complete_once(self, *, system: str, user: str, max_tokens: int) -> str:
         try:
+            body: dict = {
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "max_tokens": max_tokens,
+                "temperature": 0.2,
+            }
+            if self.json_mode:
+                body["response_format"] = {"type": "json_object"}
             resp = httpx.post(
                 f"{self.base_url}/chat/completions",
-                json={
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    "max_tokens": max_tokens,
-                    "temperature": 0.2,
-                },
+                json=body,
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
@@ -67,6 +72,8 @@ class OpenAICompatibleProvider:
                 raise LLMError(
                     f"openai-compatible returned non-string content: {content!r}"
                 )
+            if not content.strip():
+                raise LLMError("openai-compatible returned empty content")
             return content
         except LLMError:
             raise
