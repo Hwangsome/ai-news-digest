@@ -15,6 +15,16 @@ def _env(name: str, *, required: bool = True, default: str | None = None) -> str
     return val or ""
 
 
+def _env_int(name: str) -> int:
+    raw = _env(name)
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Env var {name} must be an integer, got {raw!r}"
+        ) from exc
+
+
 @dataclass(frozen=True)
 class GeneralCfg:
     timezone: str
@@ -121,7 +131,7 @@ def load_config(path: Path) -> Config:
         keywords=KeywordsCfg(**raw.get("keywords", {})),
         smtp=SMTPCfg(
             host=_env("SMTP_HOST"),
-            port=int(_env("SMTP_PORT")),
+            port=_env_int("SMTP_PORT"),
             user=_env("SMTP_USER"),
             password=_env("SMTP_PASS"),
         ),

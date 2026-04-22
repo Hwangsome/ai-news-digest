@@ -45,3 +45,13 @@ def test_source_spec_rejects_github_without_repo():
 def test_source_spec_rejects_unknown_type():
     with pytest.raises(ValueError, match="unknown type"):
         SourceSpec(type="twitter", name="X", weight=1.0, url="https://x")
+
+
+def test_non_numeric_smtp_port_raises_clear_error(monkeypatch, tmp_path: Path):
+    (tmp_path / "c.toml").write_text(Path("config.test.toml").read_text())
+    for k, v in {"LLM_API_KEY": "k", "SMTP_HOST": "h",
+                 "SMTP_PORT": "not-a-number",
+                 "SMTP_USER": "u", "SMTP_PASS": "p"}.items():
+        monkeypatch.setenv(k, v)
+    with pytest.raises(RuntimeError, match="SMTP_PORT must be an integer"):
+        load_config(tmp_path / "c.toml")
