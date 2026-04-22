@@ -148,7 +148,7 @@ def main(
 
     # Persist everything we summarized (not only final) so next run dedups fully.
     weekly_ids = set(weekly_candidate_ids(
-        final, threshold=cfg.weekly.weekly_candidate_threshold,
+        digests, threshold=cfg.weekly.weekly_candidate_threshold,
     ))
     rows = [
         SeenRow(
