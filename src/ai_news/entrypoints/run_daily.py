@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -106,14 +107,23 @@ def main(
 
     raw: list = []
     failed: list[str] = []
-    for src in sources:
+
+    def _safe_fetch(src: Source) -> tuple[str, list | Exception]:
         try:
-            items = src.fetch(since=since)
-        except Exception as exc:
-            logger.warning("source=%s raised %s", src.name, exc)
-            failed.append(src.name)
-            continue
-        raw.extend(items)
+            return src.name, src.fetch(since=since)
+        except Exception as exc:  # noqa: BLE001 — isolate any source crash
+            return src.name, exc
+
+    max_workers = min(10, max(1, len(sources)))
+    with ThreadPoolExecutor(
+        max_workers=max_workers, thread_name_prefix="src"
+    ) as ex:
+        for name, result in ex.map(_safe_fetch, sources):
+            if isinstance(result, Exception):
+                logger.warning("source=%s raised %s", name, result)
+                failed.append(name)
+            else:
+                raw.extend(result)
     logger.info("fetch total=%d failed=%d", len(raw), len(failed))
 
     fresh = dedup_against_seen(raw, db=db)

@@ -117,6 +117,31 @@ def test_daily_run_dedups_across_runs(tmp_path, monkeypatch):
     assert "[AI Daily ✗]" in mailer.sent[1].subject
 
 
+def test_daily_run_isolates_unexpected_source_exception(tmp_path, monkeypatch):
+    """A source that raises a non-HTTPError (not caught by RSSSource itself)
+    must not take down the whole run; the other source still produces output."""
+
+    def boom_or_ok(self):
+        if self.name == "FeedA":
+            raise RuntimeError("unexpected crash in parser")
+        return (FIXTURES / "feed_b.xml").read_bytes()
+
+    monkeypatch.setattr(rss_module.RSSSource, "_fetch_bytes", boom_or_ok)
+    _set_smtp_env(monkeypatch)
+
+    mailer = InMemoryMailer()
+    result = run_daily.main(
+        config_path=FIXTURES / "two_feeds_daily.toml",
+        db_path=tmp_path / "seen.sqlite",
+        llm=ScriptedLLM(),
+        mailer=mailer,
+        now=datetime(2026, 4, 22, 12, 0, tzinfo=UTC),
+    )
+    assert "FeedA" in result.sources_failed
+    assert result.items_rendered >= 1
+    assert "⚠" in mailer.sent[0].subject or "⚠" in mailer.sent[0].html
+
+
 def test_weekly_digest_uses_cached_content(tmp_path, monkeypatch):
     """Weekly should reuse cn_title/cn_summary from the daily run — no LLM call."""
     from ai_news.entrypoints import run_weekly
