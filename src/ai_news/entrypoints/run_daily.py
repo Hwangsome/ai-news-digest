@@ -127,10 +127,13 @@ def main(
     tz = ZoneInfo(cfg.general.timezone)
     date_str = now.astimezone(tz).strftime("%Y-%m-%d")
     prefix = _subject_prefix(failed, len(final))
-    subject = (
-        f"{prefix} {date_str} · {len(final)} 条 · "
-        f"{len({d.category for d in final})} 类"
-    )
+    if len(final) == 0:
+        subject = f"{prefix} {date_str} · 抓取异常"
+    else:
+        tail = f"{len(final)} 条 · {len({d.category for d in final})} 类"
+        if failed:
+            tail += f" · {len(failed)} 源失败"
+        subject = f"{prefix} {date_str} · {tail}"
     banner = f"⚠ 以下信息源抓取失败：{', '.join(failed)}" if failed else None
 
     html = render_email(
