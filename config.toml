@@ -1,0 +1,134 @@
+[general]
+timezone = "Asia/Shanghai"
+recipient_email = "REPLACE_ME@example.com"
+digest_language = "zh-CN"
+
+[llm]
+provider = "deepseek"
+model = "deepseek-chat"
+max_output_tokens_daily = 4000
+max_output_tokens_weekly = 16000
+
+[llm.fallback]
+provider = "gemini"
+model = "gemini-2.0-flash"
+
+[daily]
+send_hour_local = 8
+lookback_hours = 26
+pre_filter_top_n = 40
+final_max_items = 25
+
+[weekly]
+send_weekday = "monday"
+send_hour_local = 8
+weekly_candidate_threshold = 8.0
+
+[keywords]
+high     = ["claude", "gpt", "gemini", "agent", "skills", "openai", "anthropic",
+            "cursor", "mcp", "llm", "rag", "tool use"]
+medium   = ["benchmark", "eval", "fine-tune", "open source", "inference"]
+negative = ["crypto", "nft", "stock price"]
+
+# ---- Sources ----
+[[sources.items]]
+type = "rss"
+name = "OpenAI Blog"
+url = "https://openai.com/blog/rss.xml"
+weight = 1.0
+
+[[sources.items]]
+type = "rss"
+name = "Anthropic News"
+url = "https://www.anthropic.com/news/rss.xml"
+weight = 1.0
+
+[[sources.items]]
+type = "rss"
+name = "Google DeepMind"
+url = "https://deepmind.google/blog/rss.xml"
+weight = 1.0
+
+[[sources.items]]
+type = "rss"
+name = "Meta AI"
+url = "https://ai.meta.com/blog/rss/"
+weight = 0.9
+
+[[sources.items]]
+type = "rss"
+name = "Cursor Changelog"
+url = "https://cursor.com/changelog/rss.xml"
+weight = 0.9
+
+[[sources.items]]
+type = "rss"
+name = "Hacker News (AI)"
+url = "https://hnrss.org/newest?q=AI+OR+LLM+OR+GPT+OR+Claude&points=100"
+weight = 0.6
+
+[[sources.items]]
+type = "rss"
+name = "r/LocalLLaMA"
+url = "https://www.reddit.com/r/LocalLLaMA/top/.rss?t=day"
+weight = 0.6
+
+[[sources.items]]
+type = "rss"
+name = "r/MachineLearning"
+url = "https://www.reddit.com/r/MachineLearning/top/.rss?t=day"
+weight = 0.5
+
+[[sources.items]]
+type = "rss"
+name = "arXiv cs.CL"
+url = "http://export.arxiv.org/rss/cs.CL"
+weight = 0.4
+
+[[sources.items]]
+type = "rss"
+name = "arXiv cs.AI"
+url = "http://export.arxiv.org/rss/cs.AI"
+weight = 0.4
+
+[[sources.items]]
+type = "rss"
+name = "机器之心"
+url = "https://www.jiqizhixin.com/rss"
+weight = 0.8
+
+[[sources.items]]
+type = "rss"
+name = "量子位"
+url = "https://www.qbitai.com/feed"
+weight = 0.8
+
+[[sources.items]]
+type = "github_releases"
+name = "claude-code"
+repo = "anthropics/claude-code"
+weight = 0.9
+
+[[sources.items]]
+type = "github_releases"
+name = "openai-python"
+repo = "openai/openai-python"
+weight = 0.7
+
+[[sources.items]]
+type = "github_releases"
+name = "langchain"
+repo = "langchain-ai/langchain"
+weight = 0.6
+
+[[sources.items]]
+type = "github_releases"
+name = "llama.cpp"
+repo = "ggerganov/llama.cpp"
+weight = 0.6
+
+[[sources.items]]
+type = "github_releases"
+name = "transformers"
+repo = "huggingface/transformers"
+weight = 0.6

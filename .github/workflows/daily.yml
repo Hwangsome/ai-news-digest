@@ -1,0 +1,45 @@
+name: daily-digest
+on:
+  schedule:
+    - cron: "0 0 * * *"   # 08:00 Asia/Shanghai
+  workflow_dispatch:
+
+concurrency:
+  group: digest
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+
+      - name: Restore seen_items
+        uses: actions/cache@v4
+        with:
+          path: seen_items.sqlite
+          key: seen-items-${{ github.run_id }}
+          restore-keys: |
+            seen-items-
+
+      - name: Run daily digest
+        env:
+          LLM_API_KEY:          ${{ secrets.LLM_API_KEY }}
+          LLM_FALLBACK_API_KEY: ${{ secrets.LLM_FALLBACK_API_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          GH_TOKEN:  ${{ secrets.GITHUB_TOKEN }}
+        run: python -m ai_news.entrypoints.run_daily
+
+      - name: Save seen_items
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: seen_items.sqlite
+          key: seen-items-${{ github.run_id }}

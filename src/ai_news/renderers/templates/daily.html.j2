@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>{{ subject }}</title>
+<style>
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+         max-width: 680px; margin: 0 auto; padding: 16px; color: #222; }
+  h1 { font-size: 20px; border-bottom: 2px solid #333; padding-bottom: 6px; }
+  h2 { font-size: 16px; margin-top: 28px; color: #555;
+       border-left: 4px solid #888; padding-left: 8px; }
+  .item { margin: 14px 0 20px; }
+  .item a { color: #0b5ed7; text-decoration: none; font-weight: 600; }
+  .item .meta { color: #999; font-size: 12px; margin-top: 2px; }
+  .item .summary { font-size: 14px; line-height: 1.6; margin-top: 4px; }
+  .banner { background: #fff3cd; padding: 8px 12px; border-left: 4px solid #ffb703;
+            margin-bottom: 16px; font-size: 13px; }
+</style></head><body>
+<h1>{{ heading }}</h1>
+{% if banner %}<div class="banner">{{ banner }}</div>{% endif %}
+{% for category, group in items_by_category %}
+<h2>{{ category.value }}</h2>
+{% for d in group %}
+<div class="item">
+  <a href="{{ d.raw.url }}">{{ d.cn_title }}</a>
+  <div class="meta">{{ d.raw.source }} · 重要度 {{ "%.1f"|format(d.score) }} · <a href="{{ d.raw.url }}">原文</a></div>
+  <div class="summary">{{ d.cn_summary }}</div>
+</div>
+{% endfor %}
+{% endfor %}
+<hr><p style="color:#aaa;font-size:11px">Generated {{ generated_at }} · AI News Digest</p>
+</body></html>

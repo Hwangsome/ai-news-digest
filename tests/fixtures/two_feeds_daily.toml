@@ -1,0 +1,38 @@
+[general]
+timezone = "Asia/Shanghai"
+recipient_email = "me@example.com"
+digest_language = "zh-CN"
+
+[llm]
+provider = "deepseek"
+model = "deepseek-chat"
+max_output_tokens_daily = 4000
+max_output_tokens_weekly = 16000
+
+[daily]
+send_hour_local = 8
+lookback_hours = 48
+pre_filter_top_n = 10
+final_max_items = 10
+
+[weekly]
+send_weekday = "monday"
+send_hour_local = 8
+weekly_candidate_threshold = 8.0
+
+[keywords]
+high = ["claude", "gpt"]
+medium = []
+negative = []
+
+[[sources.items]]
+type = "rss"
+name = "FeedA"
+url = "https://ignored/a.xml"
+weight = 1.0
+
+[[sources.items]]
+type = "rss"
+name = "FeedB"
+url = "https://ignored/b.xml"
+weight = 1.0

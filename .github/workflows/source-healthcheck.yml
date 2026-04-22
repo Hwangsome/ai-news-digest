@@ -1,0 +1,22 @@
+name: source-healthcheck
+on:
+  schedule:
+    - cron: "0 6 * * 0"   # Sunday 14:00 CST
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - env:
+          LLM_API_KEY: "healthcheck"
+          SMTP_HOST: "unused"
+          SMTP_PORT: "465"
+          SMTP_USER: "u"
+          SMTP_PASS: "p"
+        run: python scripts/healthcheck.py
