@@ -51,6 +51,13 @@ class OpenAICompatibleProvider:
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["choices"][0]["message"]["content"]
-        except (httpx.HTTPError, KeyError, IndexError) as exc:
+            content = data["choices"][0]["message"]["content"]
+            if not isinstance(content, str):
+                raise LLMError(
+                    f"openai-compatible returned non-string content: {content!r}"
+                )
+            return content
+        except LLMError:
+            raise
+        except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as exc:
             raise LLMError(f"openai-compatible call failed: {exc}") from exc

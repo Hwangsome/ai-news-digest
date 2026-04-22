@@ -1,3 +1,7 @@
+import httpx
+import pytest
+
+from ai_news.llm.base import LLMError
 from ai_news.llm.openai_compatible import OpenAICompatibleProvider
 
 
@@ -37,3 +41,45 @@ def test_openai_compatible_sends_expected_payload(monkeypatch):
 def test_deepseek_uses_deepseek_base_url():
     p = OpenAICompatibleProvider.for_deepseek(api_key="k", model="deepseek-chat")
     assert p.base_url == "https://api.deepseek.com/v1"
+
+
+def test_http_error_wrapped_as_llm_error(monkeypatch):
+    def fake_post(url, json, headers, timeout):
+        raise httpx.ConnectError("boom")
+
+    monkeypatch.setattr("httpx.post", fake_post)
+    p = OpenAICompatibleProvider(api_key="k", model="m", base_url="https://x/v1")
+    with pytest.raises(LLMError, match="openai-compatible call failed"):
+        p.complete(system="s", user="u", max_tokens=10)
+
+
+def test_malformed_response_wrapped_as_llm_error(monkeypatch):
+    class FakeResp:
+        def json(self):
+            return {"unexpected": "shape"}
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(
+        "httpx.post", lambda url, json, headers, timeout: FakeResp()
+    )
+    p = OpenAICompatibleProvider(api_key="k", model="m", base_url="https://x/v1")
+    with pytest.raises(LLMError):
+        p.complete(system="s", user="u", max_tokens=10)
+
+
+def test_non_string_content_wrapped_as_llm_error(monkeypatch):
+    class FakeResp:
+        def json(self):
+            return {"choices": [{"message": {"content": None}}]}
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(
+        "httpx.post", lambda url, json, headers, timeout: FakeResp()
+    )
+    p = OpenAICompatibleProvider(api_key="k", model="m", base_url="https://x/v1")
+    with pytest.raises(LLMError, match="non-string content"):
+        p.complete(system="s", user="u", max_tokens=10)
