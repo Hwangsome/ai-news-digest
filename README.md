@@ -2,6 +2,8 @@
 
 Daily + weekly Chinese-language AI-news email digests, auto-delivered via GitHub Actions.
 
+> 📖 **配置指南（中文）：[docs/CONFIG.md](docs/CONFIG.md)** — 所有 secrets、API key 在哪领、SMTP 授权码怎么取、config.toml 每一项什么含义。**第一次用请先看这个。**
+
 ## What it does
 
 - Fetches from RSS feeds (OpenAI/Anthropic/Google/Meta/HN/Reddit/arXiv/Chinese outlets/…) and GitHub Releases.
