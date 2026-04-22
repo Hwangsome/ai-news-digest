@@ -30,3 +30,18 @@ def test_missing_smtp_secret_raises(monkeypatch, tmp_path: Path):
     monkeypatch.delenv("SMTP_HOST", raising=False)
     with pytest.raises(RuntimeError, match="SMTP_HOST"):
         load_config(tmp_path / "c.toml")
+
+
+def test_source_spec_rejects_rss_without_url():
+    with pytest.raises(ValueError, match="requires 'url'"):
+        SourceSpec(type="rss", name="X", weight=1.0)
+
+
+def test_source_spec_rejects_github_without_repo():
+    with pytest.raises(ValueError, match="requires 'repo'"):
+        SourceSpec(type="github_releases", name="X", weight=1.0)
+
+
+def test_source_spec_rejects_unknown_type():
+    with pytest.raises(ValueError, match="unknown type"):
+        SourceSpec(type="twitter", name="X", weight=1.0, url="https://x")

@@ -72,6 +72,20 @@ class SourceSpec:
     url: str | None = None
     repo: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.type == "rss" and not self.url:
+            raise ValueError(
+                f"source {self.name!r}: type='rss' requires 'url'"
+            )
+        if self.type == "github_releases" and not self.repo:
+            raise ValueError(
+                f"source {self.name!r}: type='github_releases' requires 'repo'"
+            )
+        if self.type not in {"rss", "github_releases"}:
+            raise ValueError(
+                f"source {self.name!r}: unknown type {self.type!r}"
+            )
+
 
 @dataclass(frozen=True)
 class Config:
