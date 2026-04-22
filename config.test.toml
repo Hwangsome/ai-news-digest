@@ -1,0 +1,32 @@
+[general]
+timezone = "Asia/Shanghai"
+recipient_email = "test@example.com"
+digest_language = "zh-CN"
+
+[llm]
+provider = "fake"
+model = "fake-model"
+max_output_tokens_daily = 4000
+max_output_tokens_weekly = 16000
+
+[daily]
+send_hour_local = 8
+lookback_hours = 26
+pre_filter_top_n = 40
+final_max_items = 25
+
+[weekly]
+send_weekday = "monday"
+send_hour_local = 8
+weekly_candidate_threshold = 8.0
+
+[keywords]
+high = ["claude", "gpt", "agent"]
+medium = ["benchmark"]
+negative = ["crypto"]
+
+[[sources.items]]
+type = "rss"
+name = "Fake"
+url = "https://example.com/feed.xml"
+weight = 1.0
