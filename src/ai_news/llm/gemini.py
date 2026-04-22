@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import httpx
 
+from ai_news.llm._retry import llm_retry_attempts
 from ai_news.llm.base import LLMError
+
+_RETRY_WAIT = None  # tests monkeypatch to tenacity.wait_none() to skip sleeps
 
 
 class GeminiProvider:
@@ -15,6 +18,14 @@ class GeminiProvider:
         self.timeout = timeout
 
     def complete(self, *, system: str, user: str, max_tokens: int) -> str:
+        for attempt in llm_retry_attempts(wait=_RETRY_WAIT):
+            with attempt:
+                return self._complete_once(
+                    system=system, user=user, max_tokens=max_tokens,
+                )
+        raise RuntimeError("unreachable")  # tenacity reraises on failure
+
+    def _complete_once(self, *, system: str, user: str, max_tokens: int) -> str:
         try:
             resp = httpx.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/"

@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from tenacity import wait_none
 
 from ai_news.llm.base import LLMError
 from ai_news.llm.openai_compatible import OpenAICompatibleProvider
@@ -44,6 +45,10 @@ def test_deepseek_uses_deepseek_base_url():
 
 
 def test_http_error_wrapped_as_llm_error(monkeypatch):
+    monkeypatch.setattr(
+        "ai_news.llm.openai_compatible._RETRY_WAIT", wait_none(),
+    )
+
     def fake_post(url, json, headers, timeout):
         raise httpx.ConnectError("boom")
 
@@ -54,6 +59,10 @@ def test_http_error_wrapped_as_llm_error(monkeypatch):
 
 
 def test_malformed_response_wrapped_as_llm_error(monkeypatch):
+    monkeypatch.setattr(
+        "ai_news.llm.openai_compatible._RETRY_WAIT", wait_none(),
+    )
+
     class FakeResp:
         def json(self):
             return {"unexpected": "shape"}
@@ -70,6 +79,10 @@ def test_malformed_response_wrapped_as_llm_error(monkeypatch):
 
 
 def test_non_string_content_wrapped_as_llm_error(monkeypatch):
+    monkeypatch.setattr(
+        "ai_news.llm.openai_compatible._RETRY_WAIT", wait_none(),
+    )
+
     class FakeResp:
         def json(self):
             return {"choices": [{"message": {"content": None}}]}
@@ -83,3 +96,28 @@ def test_non_string_content_wrapped_as_llm_error(monkeypatch):
     p = OpenAICompatibleProvider(api_key="k", model="m", base_url="https://x/v1")
     with pytest.raises(LLMError, match="non-string content"):
         p.complete(system="s", user="u", max_tokens=10)
+
+
+def test_retries_on_transient_httperror(monkeypatch):
+    monkeypatch.setattr(
+        "ai_news.llm.openai_compatible._RETRY_WAIT", wait_none(),
+    )
+    calls = {"n": 0}
+
+    class FakeResp:
+        def json(self):
+            return {"choices": [{"message": {"content": "ok"}}]}
+
+        def raise_for_status(self):
+            pass
+
+    def flaky_post(url, json, headers, timeout):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise httpx.ConnectError("transient")
+        return FakeResp()
+
+    monkeypatch.setattr("httpx.post", flaky_post)
+    p = OpenAICompatibleProvider(api_key="k", model="m", base_url="https://x/v1")
+    assert p.complete(system="s", user="u", max_tokens=10) == "ok"
+    assert calls["n"] == 3

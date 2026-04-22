@@ -10,7 +10,28 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Protocol, runtime_checkable
 
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
 logger = logging.getLogger(__name__)
+
+_SMTP_RETRY_WAIT = None  # tests monkeypatch to tenacity.wait_none() to skip sleeps
+
+
+def _smtp_retry() -> Retrying:
+    wait = _SMTP_RETRY_WAIT if _SMTP_RETRY_WAIT is not None else wait_exponential(
+        multiplier=1, min=1, max=16,
+    )
+    return Retrying(
+        retry=retry_if_exception_type((smtplib.SMTPException, OSError)),
+        stop=stop_after_attempt(3),
+        wait=wait,
+        reraise=True,
+    )
 
 
 def _encode_subject(subject: str) -> str:
@@ -74,6 +95,12 @@ class SMTPMailer:
         self.use_ssl = bool(port == 465) if use_ssl is None else use_ssl
 
     def send(self, *, sender: str, to: str, subject: str, html: str) -> None:
+        for attempt in _smtp_retry():
+            with attempt:
+                self._send_once(sender=sender, to=to, subject=subject, html=html)
+                return
+
+    def _send_once(self, *, sender: str, to: str, subject: str, html: str) -> None:
         payload = build_message(sender=sender, to=to, subject=subject, html=html)
         ctx = ssl.create_default_context()
         if self.use_ssl:

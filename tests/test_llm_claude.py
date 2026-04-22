@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from tenacity import wait_none
 
 from ai_news.llm.base import LLMError
 from ai_news.llm.claude import ClaudeProvider
@@ -33,6 +34,8 @@ def test_claude_sends_expected_payload(monkeypatch):
 
 
 def test_http_error_wrapped(monkeypatch):
+    monkeypatch.setattr("ai_news.llm.claude._RETRY_WAIT", wait_none())
+
     def raiser(**kwargs):
         raise httpx.ConnectError("boom")
 
@@ -43,6 +46,8 @@ def test_http_error_wrapped(monkeypatch):
 
 
 def test_malformed_response_wrapped(monkeypatch):
+    monkeypatch.setattr("ai_news.llm.claude._RETRY_WAIT", wait_none())
+
     class FakeResp:
         def json(self):
             return {"unexpected": "shape"}
@@ -77,3 +82,26 @@ def test_concatenates_text_blocks(monkeypatch):
     )
     p = ClaudeProvider(api_key="k", model="m")
     assert p.complete(system="s", user="u", max_tokens=10) == "hello world"
+
+
+def test_retries_on_transient_httperror(monkeypatch):
+    monkeypatch.setattr("ai_news.llm.claude._RETRY_WAIT", wait_none())
+    calls = {"n": 0}
+
+    class FakeResp:
+        def json(self):
+            return {"content": [{"type": "text", "text": "ok"}]}
+
+        def raise_for_status(self):
+            pass
+
+    def flaky_post(url, json, headers, timeout):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise httpx.ConnectError("transient")
+        return FakeResp()
+
+    monkeypatch.setattr("httpx.post", flaky_post)
+    p = ClaudeProvider(api_key="k", model="m")
+    assert p.complete(system="s", user="u", max_tokens=10) == "ok"
+    assert calls["n"] == 3
